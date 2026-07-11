@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto-évaluateur d'éligibilité Wikipédia — WikiConseils</title>
+<style>
+  :root{
+    --navy:#16233F;
+    --navy-2:#1F3864;
+    --gold:#9C6B1F;
+    --gold-light:#C99A3E;
+    --paper:#F7F5F0;
+    --ink:#20262F;
+    --grey:#6B7280;
+    --red:#B5432B;
+    --orange:#B5791F;
+    --green:#2F6B4F;
+    --line:#DDD6C7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+  }
+  .sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    min-height:100vh;
+    background:#fff;
+    box-shadow:0 0 40px rgba(0,0,0,0.06);
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 100%);
+    color:#fff;
+    padding:28px 28px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    right:-40px; top:-40px;
+    width:160px; height:160px;
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:50%;
+  }
+  .eyebrow{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--gold-light);
+    font-weight:700;
+  }
+  h1{
+    font-size:22px;
+    line-height:1.3;
+    margin:8px 0 6px;
+    font-weight:400;
+  }
+  .sub{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:13px;
+    color:#C9CFDC;
+    margin:0;
+  }
+  .progress-shell{
+    height:4px;
+    background:rgba(255,255,255,0.15);
+    margin-top:18px;
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--gold-light);
+    transition:width .35s ease;
+  }
+  .progress-label{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:11px;
+    color:#C9CFDC;
+    margin-top:6px;
+  }
+  main{padding:28px;}
+  .step{display:none;}
+  .step.active{display:block; animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  label.field-label{
+    display:block;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:13px;
+    font-weight:600;
+    color:var(--navy);
+    margin-bottom:6px;
+  }
+  input[type=text], input[type=email]{
+    width:100%;
+    padding:12px 14px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:15px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    margin-bottom:18px;
+    background:#FBFAF7;
+  }
+  input:focus{outline:2px solid var(--gold-light); outline-offset:1px; border-color:var(--gold-light);}
+
+  .q-index{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--gold);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .q-text{
+    font-size:19px;
+    line-height:1.4;
+    color:var(--navy);
+    margin:0 0 18px;
+  }
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .option{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:13px 14px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    cursor:pointer;
+    font-size:14.5px;
+    transition:border-color .15s, background .15s;
+  }
+  .option:hover{border-color:var(--gold-light); background:#FBF7EE;}
+  .option.selected{border-color:var(--gold); background:#FBF2DC;}
+  .option input{accent-color:var(--gold); width:16px; height:16px; flex-shrink:0;}
+
+  .nav-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:26px;
+  }
+  button{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:7px;
+    border:none;
+    cursor:pointer;
+    transition:opacity .15s, transform .1s;
+  }
+  button:active{transform:scale(0.98);}
+  .btn-primary{background:var(--navy-2); color:#fff;}
+  .btn-primary:disabled{opacity:.35; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--grey); padding-left:4px;}
+  .btn-ghost:disabled{opacity:0; pointer-events:none;}
+
+  /* Result screen */
+  .result-badge{
+    width:84px; height:84px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:38px;
+    margin:0 auto 18px;
+  }
+  .result-title{
+    text-align:center;
+    font-size:24px;
+    color:var(--navy);
+    margin:0 0 6px;
+  }
+  .result-sub{
+    text-align:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:14px;
+    color:var(--grey);
+    margin:0 0 26px;
+  }
+  .score-bar-shell{
+    height:10px;
+    background:#EFEAE0;
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:4px;
+  }
+  .score-bar-fill{height:100%; border-radius:6px; transition:width .6s ease;}
+  .score-caption{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:11px; color:var(--grey); text-align:right; margin-bottom:24px;
+  }
+  .result-box{
+    background:#FBFAF7;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    color:var(--ink);
+    margin-bottom:22px;
+  }
+  .cta{
+    display:block;
+    width:100%;
+    text-align:center;
+    padding:15px;
+    border-radius:8px;
+    background:var(--gold);
+    color:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-weight:700;
+    font-size:15px;
+    text-decoration:none;
+    margin-bottom:10px;
+  }
+  .disclaimer{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:11.5px;
+    color:var(--grey);
+    text-align:center;
+    line-height:1.5;
+    margin-top:16px;
+  }
+  footer{
+    text-align:center;
+    padding:16px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:11px;
+    color:var(--grey);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">WikiConseils · Pré-diagnostic gratuit</div>
+    <h1 id="headerTitle">Votre profil est-il éligible à une page Wikipédia ?</h1>
+    <p class="sub">15 questions · 3 minutes · résultat immédiat par email</p>
+    <div class="progress-shell"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">Étape 1 sur 17</div>
+  </header>
+
+  <main>
+
+    <!-- STEP 0: Intro / contact capture -->
+    <div class="step active" data-step="0">
+      <p class="q-index sans">Avant de commencer</p>
+      <p class="q-text sans" style="font-size:15px; line-height:1.6;">
+        Cet auto-diagnostic vous donne une première estimation de votre admissibilité à Wikipédia, sur la base des critères réels utilisés par les modérateurs. Il ne remplace pas l'audit complet à 350&nbsp;€, mais il vous indique où vous en êtes avant d'investir.
+      </p>
+      <label class="field-label" for="prenom">Votre prénom</label>
+      <input type="text" id="prenom" placeholder="Votre prénom">
+      <label class="field-label" for="email">Votre email</label>
+      <input type="email" id="email" placeholder="vous@exemple.com">
+      <label class="field-label" for="profil">Vous êtes</label>
+      <div class="options" id="profilOptions">
+        <label class="option"><input type="radio" name="profil" value="dirigeant"> Dirigeant(e) d'entreprise / entrepreneur</label>
+        <label class="option"><input type="radio" name="profil" value="artiste"> Personnalité publique / artiste</label>
+        <label class="option"><input type="radio" name="profil" value="auteur"> Auteur / créateur de contenu</label>
+        <label class="option"><input type="radio" name="profil" value="entreprise"> Entreprise / organisation</label>
+        <label class="option"><input type="radio" name="profil" value="autre"> Autre</label>
+      </div>
+    </div>
+
+    <!-- STEPS 1-15: generated by JS -->
+    <div id="questionsContainer"></div>
+
+    <!-- RESULT STEP -->
+    <div class="step" data-step="16">
+      <div id="resultBadge" class="result-badge"></div>
+      <h2 class="result-title" id="resultTitle"></h2>
+      <p class="result-sub sans" id="resultSub"></p>
+      <div class="score-bar-shell"><div class="score-bar-fill" id="scoreBarFill"></div></div>
+      <p class="score-caption sans" id="scoreCaption"></p>
+      <div class="result-box" id="resultBox"></div>
+      <a href="#" class="cta" id="ctaButton" target="_blank" rel="noopener">Voir mon prochain pas</a>
+      <p class="disclaimer">Seul un audit d'éligibilité approfondi permet de confirmer une situation réelle. Ce résultat est indicatif et fondé sur vos réponses déclaratives.</p>
+    </div>
+
+  </main>
+  <footer>© WikiConseils.com — Diagnostic confidentiel, aucune donnée partagée avec des tiers.</footer>
+</div>
+
+<script>
+/* ============================================================
+   15 QUESTIONS — chaque option porte un nombre de points (0-4)
+   ============================================================ */
+const QUESTIONS = [
+  {
+    q: "Combien d'articles de presse indépendants (pas des communiqués ni du contenu sponsorisé) parlent de vous ou de votre activité, ces 5 dernières années ?",
+    options: [
+      {label: "Aucun à ma connaissance", pts: 0},
+      {label: "1 à 2 articles", pts: 1},
+      {label: "3 à 5 articles", pts: 3},
+      {label: "6 articles ou plus", pts: 4},
+    ]
+  },
+  {
+    q: "Ces articles proviennent-ils de médias reconnus au niveau national ou international (ex. Jeune Afrique, Les Échos, Le Monde, RFI) ou surtout de médias locaux / spécialisés ?",
+    options: [
+      {label: "Aucun média de ce type", pts: 0},
+      {label: "Surtout des médias locaux ou très spécialisés", pts: 1},
+      {label: "Un mélange des deux", pts: 3},
+      {label: "Majoritairement des médias nationaux/internationaux", pts: 4},
+    ]
+  },
+  {
+    q: "Avez-vous déjà été interviewé(e) à la radio ou à la télévision, hors publicité ou contenu sponsorisé ?",
+    options: [
+      {label: "Jamais", pts: 0},
+      {label: "Une fois", pts: 1},
+      {label: "Plusieurs fois, ponctuellement", pts: 2},
+      {label: "Régulièrement sollicité(e)", pts: 4},
+    ]
+  },
+  {
+    q: "Avez-vous reçu un prix, une distinction ou une reconnaissance professionnelle notable (nationale ou internationale) ?",
+    options: [
+      {label: "Non", pts: 0},
+      {label: "Une distinction locale ou sectorielle", pts: 2},
+      {label: "Une distinction nationale reconnue", pts: 3},
+      {label: "Une distinction internationale", pts: 4},
+    ]
+  },
+  {
+    q: "Occupez-vous, ou avez-vous occupé, un poste de direction dans une organisation de taille significative (entreprise, institution, ONG) ?",
+    options: [
+      {label: "Non", pts: 0},
+      {label: "Poste de direction dans une petite structure", pts: 1},
+      {label: "Poste de direction dans une structure de taille moyenne", pts: 3},
+      {label: "Poste de direction dans une grande organisation ou un groupe", pts: 4},
+    ]
+  },
+  {
+    q: "Avez-vous publié un ou plusieurs ouvrages chez un éditeur reconnu (hors autoédition pure) ?",
+    options: [
+      {label: "Non, aucun ouvrage publié", pts: 0},
+      {label: "Un ouvrage autoédité", pts: 1},
+      {label: "Un ouvrage chez un éditeur", pts: 3},
+      {label: "Plusieurs ouvrages chez un ou plusieurs éditeurs", pts: 4},
+    ]
+  },
+  {
+    q: "Vos publications ou votre œuvre ont-elles fait l'objet de critiques ou recensions dans la presse spécialisée ?",
+    options: [
+      {label: "Non / non applicable", pts: 0},
+      {label: "Une ou deux mentions", pts: 2},
+      {label: "Plusieurs critiques dans la presse spécialisée", pts: 4},
+    ]
+  },
+  {
+    q: "Diriez-vous que votre notoriété dépasse votre cercle professionnel immédiat (collègues, clients, secteur) ?",
+    options: [
+      {label: "Non, je suis surtout connu(e) dans mon cercle proche", pts: 0},
+      {label: "Un peu, au-delà de mon secteur direct", pts: 2},
+      {label: "Oui, on me reconnaît largement dans mon pays ou ma région", pts: 4},
+    ]
+  },
+  {
+    q: "Existe-t-il des sources qui parlent de vous sans que vous ou votre entreprise ne les ayez sollicitées ou payées ?",
+    options: [
+      {label: "Non, tout ce qui existe vient de moi (site, réseaux, communiqués)", pts: 0},
+      {label: "Quelques mentions spontanées", pts: 2},
+      {label: "Oui, plusieurs sources totalement indépendantes", pts: 4},
+    ]
+  },
+  {
+    q: "Votre entreprise ou votre activité existe-t-elle depuis plus de 5 ans, avec une activité continue et documentée ?",
+    options: [
+      {label: "Moins de 2 ans", pts: 0},
+      {label: "Entre 2 et 5 ans", pts: 1},
+      {label: "Plus de 5 ans", pts: 3},
+      {label: "Plus de 10 ans", pts: 4},
+    ]
+  },
+  {
+    q: "Avez-vous pris la parole lors de conférences, salons ou événements publics reconnus dans votre secteur ?",
+    options: [
+      {label: "Jamais", pts: 0},
+      {label: "Une ou deux fois", pts: 1},
+      {label: "Régulièrement, au niveau national", pts: 3},
+      {label: "Régulièrement, au niveau international", pts: 4},
+    ]
+  },
+  {
+    q: "Si on vous demandait aujourd'hui de citer des sources prouvant votre notoriété, combien de médias différents pourriez-vous nommer ?",
+    options: [
+      {label: "Aucun", pts: 0},
+      {label: "1 à 2", pts: 1},
+      {label: "3 à 5", pts: 3},
+      {label: "Plus de 5", pts: 4},
+    ]
+  },
+  {
+    q: "Avez-vous déjà été cité(e) dans un ouvrage, une thèse, un rapport ou une étude indépendante ?",
+    options: [
+      {label: "Non", pts: 0},
+      {label: "Une fois", pts: 2},
+      {label: "Plusieurs fois", pts: 4},
+    ]
+  },
+  {
+    q: "Votre nom ou celui de votre entreprise figure-t-il dans des annuaires ou bases de données professionnelles reconnues (hors réseaux sociaux) ?",
+    options: [
+      {label: "Non", pts: 0},
+      {label: "Dans un annuaire sectoriel", pts: 2},
+      {label: "Dans plusieurs bases reconnues (registres, classements, etc.)", pts: 4},
+    ]
+  },
+  {
+    q: "Votre notoriété actuelle est-elle installée depuis plusieurs années, ou plutôt récente et encore en construction ?",
+    options: [
+      {label: "Très récente (moins d'1 an)", pts: 0},
+      {label: "En construction (1 à 3 ans)", pts: 2},
+      {label: "Installée depuis plusieurs années", pts: 4},
+    ]
+  },
+];
+
+const TOTAL_STEPS = QUESTIONS.length + 2; // intro + questions + result
+let currentStep = 0;
+const answers = new Array(QUESTIONS.length).fill(null);
+
+/* Build question steps */
+const container = document.getElementById('questionsContainer');
+QUESTIONS.forEach((item, idx) => {
+  const div = document.createElement('div');
+  div.className = 'step';
+  div.dataset.step = idx + 1;
+  div.innerHTML = `
+    <p class="q-index sans">Question ${idx + 1} sur ${QUESTIONS.length}</p>
+    <p class="q-text">${item.q}</p>
+    <div class="options">
+      ${item.options.map((o, oi) => `
+        <label class="option" data-qidx="${idx}" data-pts="${o.pts}">
+          <input type="radio" name="q${idx}" value="${oi}">
+          <span>${o.label}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  container.appendChild(div);
+});
+
+/* Nav buttons injected per step (except result) */
+document.querySelectorAll('.step').forEach(step => {
+  const n = parseInt(step.dataset.step);
+  if (n === TOTAL_STEPS - 1) return; // skip result step
+  const nav = document.createElement('div');
+  nav.className = 'nav-row';
+  nav.innerHTML = `
+    <button class="btn-ghost sans" onclick="goPrev()">&larr; Précédent</button>
+    <button class="btn-primary sans" id="next-${n}" onclick="goNext()" disabled>${n === 0 ? 'Commencer' : (n === QUESTIONS.length ? 'Voir mon résultat' : 'Suivant')} &rarr;</button>
+  `;
+  step.appendChild(nav);
+});
+
+function updateProgress() {
+  const pct = Math.round((currentStep / (TOTAL_STEPS - 1)) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = currentStep === TOTAL_STEPS - 1
+    ? 'Résultat'
+    : `Étape ${currentStep + 1} sur ${TOTAL_STEPS - 1}`;
+}
+
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+  currentStep = n;
+  updateProgress();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function goPrev() {
+  if (currentStep > 0) showStep(currentStep - 1);
+}
+
+function goNext() {
+  if (currentStep === TOTAL_STEPS - 2) {
+    computeResult();
+    showStep(TOTAL_STEPS - 1);
+    return;
+  }
+  showStep(currentStep + 1);
+}
+
+/* Step 0 validation */
+const prenomInput = document.getElementById('prenom');
+const emailInput = document.getElementById('email');
+function validateStep0() {
+  const profilChecked = document.querySelector('input[name="profil"]:checked');
+  const ok = prenomInput.value.trim().length > 1
+    && /\S+@\S+\.\S+/.test(emailInput.value)
+    && profilChecked;
+  document.getElementById('next-0').disabled = !ok;
+}
+prenomInput.addEventListener('input', validateStep0);
+emailInput.addEventListener('input', validateStep0);
+document.querySelectorAll('input[name="profil"]').forEach(r => r.addEventListener('change', () => {
+  document.querySelectorAll('#profilOptions .option').forEach(o => o.classList.remove('selected'));
+  r.closest('.option').classList.add('selected');
+  validateStep0();
+}));
+
+/* Question option handling */
+document.querySelectorAll('.option[data-qidx]').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const qidx = parseInt(opt.dataset.qidx);
+    const pts = parseInt(opt.dataset.pts);
+    answers[qidx] = pts;
+    const step = opt.closest('.step');
+    step.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    step.querySelector('input[type=radio]').checked = false;
+    opt.querySelector('input[type=radio]').checked = true;
+    document.getElementById(`next-${qidx + 1}`).disabled = false;
+  });
+});
+
+/* Scoring: max = 4+4+4+4+4+4+4+4+4+4+4+4+4+4+4 = 60 */
+const MAX_SCORE = QUESTIONS.reduce((sum, q) => sum + Math.max(...q.options.map(o => o.pts)), 0);
+
+function computeResult() {
+  const score = answers.reduce((a, b) => a + (b || 0), 0);
+  const pct = Math.round((score / MAX_SCORE) * 100);
+
+  let verdict, emoji, color, title, sub, boxHtml, ctaLabel, ctaHref;
+
+  if (pct < 30) {
+    verdict = 'rouge'; emoji = '🔴'; color = 'var(--red)';
+    title = "Pas encore éligible";
+    sub = "Le potentiel de conservation est aujourd'hui trop faible";
+    boxHtml = `Sur la base de vos réponses, votre couverture médiatique indépendante est actuellement insuffisante pour envisager une page Wikipédia — même avant tout audit approfondi. Ce n'est pas une impasse : c'est une étape de construction de notoriété à mener d'abord, généralement via des relations presse ciblées, avant qu'un audit ait du sens.`;
+    ctaLabel = "Réserver un appel de 15 minutes";
+    ctaHref = "mailto:mgilles@wikiconseils.com?subject=Demande%20d%27%C3%A9change%20-%20strat%C3%A9gie%20de%20visibilit%C3%A9&body=Bonjour%2C%20suite%20%C3%A0%20mon%20auto-diagnostic%2C%20je%20souhaite%20%C3%A9changer%20sur%20ma%20strat%C3%A9gie%20de%20visibilit%C3%A9%20avant%20Wikip%C3%A9dia.";
+  } else if (pct < 60) {
+    verdict = 'orange'; emoji = '🟠'; color = 'var(--orange)';
+    title = "Éligibilité insuffisante, mais un potentiel réel";
+    sub = "Certains signaux sont là — il faut les vérifier précisément";
+    boxHtml = `Vous avez déjà des signaux de notoriété intéressants, mais un score "orange" ne veut ni dire oui ni dire non : ce quiz ne peut pas vérifier la qualité réelle de vos sources, seulement compter vos réponses déclaratives. Après un audit humain approfondi, votre dossier peut tout aussi bien se révéler non éligible que pleinement éligible. L'audit d'éligibilité (350&nbsp;€) est fait exactement pour ça : il examine vos sources une à une et vous donne une réponse vérifiée, pas une estimation.`;
+    ctaLabel = "En savoir plus sur l'audit d'éligibilité (350€)";
+    ctaHref = "mailto:mgilles@wikiconseils.com?subject=Demande%20d%27audit%20d%27%C3%A9ligibilit%C3%A9&body=Bonjour%2C%20suite%20%C3%A0%20mon%20auto-diagnostic%2C%20je%20souhaite%20en%20savoir%20plus%20sur%20l%27audit%20d%27%C3%A9ligibilit%C3%A9.";
+  } else {
+    verdict = 'vert'; emoji = '🟢'; color = 'var(--green)';
+    title = "Éligibilité probable";
+    sub = "Vos réponses indiquent un dossier solide — à confirmer";
+    boxHtml = `Vos réponses indiquent un profil qui correspond bien, sur le papier, aux critères d'admissibilité de Wikipédia. "Probable" ne veut pas dire "certain" : ce quiz ne peut pas évaluer la qualité exacte de vos sources ni le contenu réel des articles qui vous concernent — seul un audit humain approfondi peut confirmer et sécuriser un dossier avant la création de la page. C'est le bon moment pour le lancer.`;
+    ctaLabel = "En savoir plus sur l'audit d'éligibilité (350€)";
+    ctaHref = "mailto:mgilles@wikiconseils.com?subject=Demande%20d%27audit%20d%27%C3%A9ligibilit%C3%A9&body=Bonjour%2C%20suite%20%C3%A0%20mon%20auto-diagnostic%2C%20je%20souhaite%20en%20savoir%20plus%20sur%20l%27audit%20d%27%C3%A9ligibilit%C3%A9.";
+  }
+
+  document.getElementById('resultBadge').style.background = color;
+  document.getElementById('resultBadge').textContent = emoji;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultTitle').style.color = color;
+  document.getElementById('resultSub').textContent = sub;
+  document.getElementById('scoreBarFill').style.width = pct + '%';
+  document.getElementById('scoreBarFill').style.background = color;
+  document.getElementById('scoreCaption').textContent = `Score de notoriété déclaratif : ${pct}/100`;
+  document.getElementById('resultBox').innerHTML = boxHtml;
+  document.getElementById('ctaButton').textContent = ctaLabel;
+  document.getElementById('ctaButton').href = ctaHref;
+  document.getElementById('ctaButton').style.background = color;
+
+  /* ============================================================
+     ENVOI DES DONNÉES — à connecter à votre relais Google Apps Script
+     Version simple : voir "backend-sheet-only.gs" (Sheet seul, sans Brevo).
+     Remplacez YOUR_APPS_SCRIPT_URL ci-dessous par l'URL de votre
+     déploiement Apps Script une fois en place.
+     ============================================================ */
+  const basePayload = {
+    prenom: prenomInput.value.trim(),
+    email: emailInput.value.trim(),
+    profil: document.querySelector('input[name="profil"]:checked')?.value || '',
+    score: score,
+    scorePct: pct,
+    verdict: verdict,
+    reponses: answers,
+  };
+
+  sendEvent({ ...basePayload, type: "Soumission quiz" });
+
+  // Trace le clic sur le bouton de résultat AVANT l'ouverture du mail,
+  // pour pouvoir repérer dans le Sheet qui n'a pas encore cliqué.
+  const ctaBtn = document.getElementById('ctaButton');
+  ctaBtn.onclick = () => {
+    sendEvent({ ...basePayload, type: "Clic CTA" });
+  };
+}
+
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL"; // <-- à remplacer
+
+function sendEvent(payload) {
+  if (APPS_SCRIPT_URL === "YOUR_APPS_SCRIPT_URL") {
+    console.log("Auto-évaluateur — événement calculé (backend non connecté) :", payload);
+    return;
+  }
+  // sendBeacon est plus fiable que fetch au moment d'un clic qui ouvre
+  // un client mail (la page peut perdre le focus juste après le clic).
+  if (navigator.sendBeacon) {
+    const blob = new Blob([JSON.stringify(payload)], { type: "text/plain;charset=UTF-8" });
+    navigator.sendBeacon(APPS_SCRIPT_URL, blob);
+  } else {
+    fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify(payload),
+    }).catch(err => console.error("Envoi échoué :", err));
+  }
+}
+</script>
+
+</body>
+</html>
